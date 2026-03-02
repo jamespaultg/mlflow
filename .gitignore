@@ -1,0 +1,24 @@
+# Jupyter checkpoints
+.ipynb_checkpoints/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# MLflow artifacts
+mlruns/
+artifacts_reg/
+artifacts_clf/
+
+# Joblib files
+*.joblib
+
+# Environment
+.env
+.venv/
+venv/
+
+# OS
+.DS_Store
+Thumbs.db

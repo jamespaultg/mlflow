@@ -33,3 +33,10 @@ if registry:
 print("tracking_uri:", mlflow.get_tracking_uri())
 print("registry_uri:", mlflow.get_registry_uri())
 
+# find out exactly the layout
+{
+  "dataframe_records": [
+    <paste exactly: X_train.head(1).to_dict(orient="records")[0]>
+  ]
+}
+

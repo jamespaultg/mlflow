@@ -1,0 +1,19 @@
+Check A — Confirm what registry the code wrote to
+import mlflow, os
+print("MLFLOW_TRACKING_URI env:", os.environ.get("MLFLOW_TRACKING_URI"))
+print("tracking_uri:", mlflow.get_tracking_uri())
+print("registry_uri:", mlflow.get_registry_uri())
+
+
+Check B — Confirm the model exists from the registry’s point of view (authoritative)
+from mlflow.tracking import MlflowClient
+c = MlflowClient()
+
+# does the registry see it?
+names = [m.name for m in c.search_registered_models()]
+print("found?", "irish_home_reg_B" in names)
+
+# does it have versions?
+vers = c.search_model_versions("name='irish_home_reg_B'")
+print([(v.version, v.status, v.current_stage) for v in vers])
+

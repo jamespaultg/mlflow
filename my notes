@@ -17,3 +17,19 @@ print("found?", "irish_home_reg_B" in names)
 vers = c.search_model_versions("name='irish_home_reg_B'")
 print([(v.version, v.status, v.current_stage) for v in vers])
 
+
+
+import os, mlflow
+
+# Never set file:// tracking in Domino
+tracking = os.environ.get("MLFLOW_TRACKING_URI")
+if tracking:
+    mlflow.set_tracking_uri(tracking)
+
+registry = os.environ.get("MLFLOW_REGISTRY_URI")
+if registry:
+    mlflow.set_registry_uri(registry)
+
+print("tracking_uri:", mlflow.get_tracking_uri())
+print("registry_uri:", mlflow.get_registry_uri())
+

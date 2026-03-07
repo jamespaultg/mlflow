@@ -1,3 +1,12 @@
+import requests
+
+base_url = "https://<your-domino-host>"  # e.g. https://dlg-prod-saas.domino.tech
+r = requests.get(f"{base_url}/version", timeout=10)
+
+print(r.status_code)
+print(r.text)
+
+
 import sys, sklearn, pandas as pd, numpy as np, mlflow, joblib
 
 print("python:", sys.version)

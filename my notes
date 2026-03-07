@@ -1,0 +1,92 @@
+# 1. Load the registered model and print signature + input example
+import json
+import mlflow
+import pandas as pd
+
+MODEL_NAME = "irish_home_reg_B"     # <-- change
+MODEL_VERSION = "1"                # <-- change
+
+model_uri = f"models:/{MODEL_NAME}/{MODEL_VERSION}"
+m = mlflow.pyfunc.load_model(model_uri)
+
+print("Model URI:", model_uri)
+print("\n--- Signature ---")
+print(m.metadata.signature)
+
+# Input example (if logged)
+print("\n--- Input example metadata ---")
+print(m.metadata.saved_input_example_info)
+
+# Try to fetch the input example into Python
+# (MLflow stores it as an artifact; this is the easiest robust way to pull it)
+local_path = mlflow.artifacts.download_artifacts(artifact_uri=f"{model_uri}/input_example.json")
+print("\nInput example downloaded to:", local_path)
+
+with open(local_path, "r") as f:
+    input_example_obj = json.load(f)
+
+print("\n--- input_example.json (top-level keys) ---")
+print(input_example_obj.keys())
+
+
+# 2. Build a DataFrame from the input example and run local inference
+# Normalize input example rows into a list[dict]
+if isinstance(input_example_obj, dict) and "inputs" in input_example_obj:
+    rows = input_example_obj["inputs"]
+elif isinstance(input_example_obj, list):
+    rows = input_example_obj
+else:
+    raise ValueError(f"Unexpected input_example.json structure: {type(input_example_obj)}")
+
+df = pd.DataFrame(rows)
+
+print("\n--- Inference DataFrame shape ---")
+print(df.shape)
+print("\n--- Inference DataFrame dtypes ---")
+print(df.dtypes)
+
+# Local inference against the loaded registry model
+preds_local = m.predict(df)
+print("\n--- Local predictions ---")
+print(preds_local)
+
+
+# 3. Verify: do the input columns match the signature?
+sig = m.metadata.signature
+if sig is not None and sig.inputs is not None:
+    sig_cols = [c.name for c in sig.inputs.inputs]  # MLflow ColumnSpec list
+    missing = [c for c in sig_cols if c not in df.columns]
+    extra = [c for c in df.columns if c not in sig_cols]
+    print("\n--- Signature vs DataFrame ---")
+    print("Signature cols:", sig_cols)
+    print("Missing cols in df:", missing)
+    print("Extra cols in df:", extra)
+else:
+    print("\nNo signature found on the model metadata.")
+
+# 4. Call the Domino endpoint from the notebook using the SAME rows
+import os
+import requests
+
+ENDPOINT_URL = "https://<your-domino-endpoint-invoke-url>"  # <-- change
+
+payload = {"dataframe_records": rows}
+
+headers = {"Content-Type": "application/json"}
+
+# If your endpoint requires auth, set a token:
+token = ""
+if token:
+    headers["Authorization"] = f"Bearer {token}"
+
+resp = requests.post(ENDPOINT_URL, headers=headers, json=payload, timeout=60)
+
+print("Status:", resp.status_code)
+print("Response:", resp.text[:2000])
+
+
+# 5. If the endpoint still says “failed to enforce schema”
+print("\n--- What I'm sending to endpoint (keys of first row) ---")
+print(list(rows[0].keys()))
+print("\n--- First row sample ---")
+print(rows[0])

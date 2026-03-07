@@ -90,3 +90,51 @@ print("\n--- What I'm sending to endpoint (keys of first row) ---")
 print(list(rows[0].keys()))
 print("\n--- First row sample ---")
 print(rows[0])
+
+
+# 6 safe step-2
+import json
+import numpy as np
+import pandas as pd
+import mlflow
+
+MODEL_NAME = "irish_home_reg_B"   # change
+MODEL_VERSION = "1"              # change
+model_uri = f"models:/{MODEL_NAME}/{MODEL_VERSION}"
+
+m = mlflow.pyfunc.load_model(model_uri)
+
+# --- Load input_example.json from the model artifacts ---
+local_path = mlflow.artifacts.download_artifacts(
+    artifact_uri=f"{model_uri}/input_example.json"
+)
+with open(local_path, "r") as f:
+    input_example_obj = json.load(f)
+
+# --- Normalize into list[dict] rows ---
+if isinstance(input_example_obj, dict) and "inputs" in input_example_obj:
+    rows = input_example_obj["inputs"]
+elif isinstance(input_example_obj, list):
+    rows = input_example_obj
+else:
+    raise ValueError(f"Unexpected input_example.json structure: {type(input_example_obj)}")
+
+# --- Build DataFrame ---
+df = pd.DataFrame(rows)
+
+# --- SANITIZE for JSON + serving ---
+# 1) convert inf/-inf -> NaN
+df = df.replace([np.inf, -np.inf], np.nan)
+
+# 2) convert NaN -> None (JSON null)
+df = df.where(pd.notnull(df), None)
+
+# 3) force numpy scalars to python scalars (safe for json)
+df = df.astype(object)
+
+# --- Local inference (Milestone 1) ---
+preds_local = m.predict(df)
+print("Local predictions:", preds_local[:10])
+
+# Keep this for endpoint call (Milestone 2)
+rows_clean = df.to_dict(orient="records")
